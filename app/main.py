@@ -7,12 +7,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.database import db
 from app.core.config import config
 from api.router import router as api_router
+from models.models import User, Mission, Step, Location, Note
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_beanie(
         database=db,
         document_models=[
+            User,
+            Mission,
+            Step,
+            Note,
+            Location,
         ],
     )
 
