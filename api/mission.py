@@ -1,6 +1,6 @@
 from typing import Annotated, Optional
 from app.core.jwt import DecodedToken, FastJWT
-from models.models import Step, User, Mission, MissionStatus
+from models.models import Location, Step, User, Mission, MissionStatus
 from datetime import datetime
 from beanie import PydanticObjectId
 from fastapi import APIRouter, HTTPException, Query, Request
@@ -38,12 +38,12 @@ async def get_missions(
 
     return await Mission.find(*filters).to_list()
 
-
 @mission_router.get("/{mission_id}")
 async def get_mission(
     mission_id: PydanticObjectId,
     request: Request,
     include_steps: Annotated[Optional[bool], Query(alias="include_steps")] = False,
+    include_locations: Annotated[Optional[bool], Query(alias="include_locations")] = False,
 ):
     token: DecodedToken = await FastJWT().decode(request.headers["Authorization"])
     user = await User.get(token.id)
@@ -57,9 +57,24 @@ async def get_mission(
     if mission.operator != token.id:
         raise HTTPException(403, "Forbidden")
 
+    steps_data = []
+    if include_steps:
+        steps = await Step.find(Step.mission_id == mission.id).to_list()
+        if include_locations:
+            steps_data = [
+                {
+                    "_id": str(step.id),
+                    **step.model_dump(exclude={"mission_id", "id"}),
+                    "location": await Location.get(step.location) if step.location else None,
+                }
+                for step in steps
+            ]
+        else:
+            steps_data = steps
+
     return {
         "mission": mission,
-        "steps": await Step.find(Step.mission_id == mission.id).to_list() if include_steps else []
+        "steps": steps_data
     }
 
 
