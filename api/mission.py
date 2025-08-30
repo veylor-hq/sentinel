@@ -159,3 +159,54 @@ async def create_mission_template(mission_id: PydanticObjectId, request: Request
         "mission_template": mission_template,
         "step_templates": step_templates
     }
+
+
+# template to mission
+import re
+
+@mission_router.post("/{mission_template_id}/from_template")
+async def create_mission_from_template(mission_template_id: PydanticObjectId, request: Request):
+    token: DecodedToken = await FastJWT().decode(request.headers["Authorization"])
+    user = await User.get(token.id)
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+
+    mission_template = await MissionTemplate.get(mission_template_id)
+    if not mission_template:
+        raise HTTPException(404, "Mission template not found")
+
+    # Get all missions starting with template name
+    existing_missions = await Mission.find(
+        {"name": {"$regex": f"^{re.escape(mission_template.name)}"}}
+    ).to_list()
+
+    # Collect numeric suffixes
+    numbers = []
+    for m in existing_missions:
+        match = re.match(rf"^{re.escape(mission_template.name)}-(\d+)$", m.name)
+        if match:
+            numbers.append(int(match.group(1)))
+        elif m.name == mission_template.name:
+            numbers.append(0)  # exact match counts as first duplicate
+
+    next_number = max(numbers, default=-1) + 1
+
+    # Assign new name
+    mission_name = mission_template.name if next_number == 0 else f"{mission_template.name}-{next_number}"
+
+    # Create the mission
+    mission = await Mission(
+        **mission_template.model_dump(exclude={"id", "name"}),
+        name=mission_name,
+        operator=user.id
+    ).insert()
+
+    # Copy steps preserving order
+    step_templates = await StepTemplate.find(StepTemplate.mission_template == mission_template.id).sort(StepTemplate.order).to_list()
+    for step_template in step_templates:
+        await Step(
+            **step_template.model_dump(exclude={"id", "mission_template"}),
+            mission_id=mission.id
+        ).insert()
+
+    return mission

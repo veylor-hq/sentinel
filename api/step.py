@@ -73,3 +73,13 @@ async def get_step(step_id: PydanticObjectId):
         raise HTTPException(status_code=404, detail="Step not found")
     return step
 
+
+@step_router.patch("/{step_id}")
+async def change_step_status(step_id: PydanticObjectId, status: StepStatus):
+    step = await Step.get(step_id)
+    if not step:
+        raise HTTPException(status_code=404, detail="Step not found")
+
+    step.status = status
+    await step.save()
+    return step
