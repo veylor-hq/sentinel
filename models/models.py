@@ -67,7 +67,9 @@ class Step(Document):
     order: int = 0
     name: str
 
-    type: StepType = StepType.CUSTOM
+    mission_id: PydanticObjectId
+
+    step_type: StepType = StepType.CUSTOM
 
     planned_start: Optional[datetime] = None
     planned_end: Optional[datetime] = None
@@ -76,7 +78,7 @@ class Step(Document):
 
     status: StepStatus = StepStatus.PLANNED
 
-    location: Optional[Location] = None
+    location: Optional[PydanticObjectId] = None
 
 class MissionTemplate(Document):
     name: str

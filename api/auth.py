@@ -1,9 +1,8 @@
 from app.core.jwt import FastJWT
-from models.models import User, Mission, Step, Location, Note
+from models.models import User
 from app.core.password_utils import get_password_hash, verify_password
-from datetime import datetime
 from beanie import PydanticObjectId
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 

@@ -1,11 +1,10 @@
 from typing import Annotated, Optional
 from app.core.jwt import DecodedToken, FastJWT
-from models.models import User, Mission, MissionStatus
-from app.core.password_utils import get_password_hash, verify_password
+from models.models import Step, User, Mission, MissionStatus
 from datetime import datetime
 from beanie import PydanticObjectId
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, HTTPException, Query, Request
+from pydantic import BaseModel
 
 
 class CreateMissionSchema(BaseModel):
@@ -16,9 +15,6 @@ class CreateMissionSchema(BaseModel):
 
 
 mission_router = APIRouter(prefix="/mission")
-
-from typing import Optional
-from beanie import PydanticObjectId
 
 
 async def get_user_by_id(user_id: PydanticObjectId) -> Optional[User]:
@@ -44,7 +40,11 @@ async def get_missions(
 
 
 @mission_router.get("/{mission_id}")
-async def get_mission(mission_id: PydanticObjectId, request: Request):
+async def get_mission(
+    mission_id: PydanticObjectId,
+    request: Request,
+    include_steps: Annotated[Optional[bool], Query(alias="include_steps")] = False,
+):
     token: DecodedToken = await FastJWT().decode(request.headers["Authorization"])
     user = await User.get(token.id)
     if not user:
@@ -57,7 +57,10 @@ async def get_mission(mission_id: PydanticObjectId, request: Request):
     if mission.operator != token.id:
         raise HTTPException(403, "Forbidden")
 
-    return mission
+    return {
+        "mission": mission,
+        "steps": await Step.find(Step.mission_id == mission.id).to_list() if include_steps else []
+    }
 
 
 @mission_router.post("/")
