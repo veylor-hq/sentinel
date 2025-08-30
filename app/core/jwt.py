@@ -1,7 +1,14 @@
+from beanie import PydanticObjectId
 import jwt
 import datetime
 
 from fastapi import HTTPException, Header
+from pydantic import BaseModel
+
+class DecodedToken(BaseModel):
+    expire: float
+    id: PydanticObjectId
+    username: str
 
 class FastJWT:
     def __init__(self):
@@ -23,8 +30,12 @@ class FastJWT:
         return jwt_token
     
 
-    async def decode(self, payload):
-        return jwt.decode(payload, self.secret_key, algorithms=["HS256"])
+    async def decode(self, payload) -> DecodedToken:
+        decoded_token = jwt.decode(payload, self.secret_key, algorithms=["HS256"])
+
+        return DecodedToken(
+            **decoded_token
+        )
 
 
     async def login_required(self, Authorization=Header("Authorization")):
@@ -34,8 +45,9 @@ class FastJWT:
             
             jwt_token = await self.decode(Authorization)
 
-            if jwt_token["expire"] < int(datetime.datetime.now().timestamp()):
+            if jwt_token.expire < int(datetime.datetime.now().timestamp()):
                 raise
 
-        except:
+        except Exception as e:
+            print(e)
             raise HTTPException(status_code=401, detail="Unauthorized")

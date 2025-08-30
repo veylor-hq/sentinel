@@ -36,7 +36,6 @@ async def signup_event(payload: AuthSchema) -> UserOut:
 @auth_router.post("/signin")
 async def signin_event(payload: AuthSchema):
     user = await User.find_one({"username": payload.username})
-    print(user.password, payload.password, get_password_hash(payload.password))
     if not user or not verify_password(payload.password, user.password):
         raise HTTPException(status_code=401, detail="Bad username or password")
 

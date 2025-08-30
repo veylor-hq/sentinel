@@ -78,6 +78,8 @@ class Step(Document):
 
     location: Optional[Location] = None
 
+class MissionTemplate(Document):
+    name: str
 
 class Mission(Document):
     name: str
@@ -90,7 +92,7 @@ class Mission(Document):
 
     # High-level notes or mission metadata
     summary: Optional[str] = None
-    tags: List[str] = Field(default_factory=list)
+    tags: Optional[list] = []
 
 
     class Settings:

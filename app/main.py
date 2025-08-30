@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.database import db
 from app.core.config import config
 from api.router import router as api_router
-from models.models import User, Mission, Step, Location, Note
+from models.models import User, Mission, Step, Location, Note, MissionTemplate
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -19,6 +19,7 @@ async def lifespan(app: FastAPI):
             Step,
             Note,
             Location,
+            MissionTemplate,
         ],
     )
 
