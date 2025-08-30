@@ -1,10 +1,10 @@
-from typing import Optional
+from typing import Annotated, Optional
 from app.core.jwt import DecodedToken, FastJWT
-from models.models import User, Mission, Step, Location, Note
+from models.models import User, Mission, MissionStatus
 from app.core.password_utils import get_password_hash, verify_password
 from datetime import datetime
 from beanie import PydanticObjectId
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 
@@ -26,13 +26,44 @@ async def get_user_by_id(user_id: PydanticObjectId) -> Optional[User]:
     user: Optional[User] = await User.get(user_id)
     return user
 
+@mission_router.get("/")
+async def get_missions(
+    request: Request,
+    status_filter: Annotated[Optional[MissionStatus], Query(alias="mission_status")] = None,
+):
+    token: DecodedToken = await FastJWT().decode(request.headers["Authorization"])
+    user = await User.get(token.id)
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+
+    filters = [Mission.operator == token.id]
+    if status_filter is not None:
+        filters.append(Mission.status == status_filter)
+
+    return await Mission.find(*filters).to_list()
+
+
+@mission_router.get("/{mission_id}")
+async def get_mission(mission_id: PydanticObjectId, request: Request):
+    token: DecodedToken = await FastJWT().decode(request.headers["Authorization"])
+    user = await User.get(token.id)
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+
+    mission = await Mission.get(mission_id)
+    if not mission:
+        raise HTTPException(404, "Mission not found")
+
+    if mission.operator != token.id:
+        raise HTTPException(403, "Forbidden")
+
+    return mission
+
 
 @mission_router.post("/")
 async def new_mission(request: Request, payload: CreateMissionSchema):
     token: DecodedToken = await FastJWT().decode(request.headers["Authorization"])
-    print(token)
     user: Optional[User] = await User.get(token.id)
-    print(user)
     if not user:
         raise HTTPException(401, "Unauthorized")
     
@@ -43,7 +74,7 @@ async def new_mission(request: Request, payload: CreateMissionSchema):
         raise HTTPException(400, "Mission Alredy Exists")
 
     mission = await Mission(
-        **payload,
+        **payload.model_dump(),
         operator=token.id
     ).insert()
 
