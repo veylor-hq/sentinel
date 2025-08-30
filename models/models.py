@@ -97,18 +97,18 @@ class Mission(Document):
     tags: Optional[list] = []
 
 
-    class Settings:
-        orm_mode = True
+class MissionTemplate(Document):
+    name: str
 
-    # ---------- Convenience helpers ----------
-    def start(self):
-        self.status = MissionStatus.ACTIVE
-        self.touch()
+    tags: Optional[list] = []
 
-    def complete(self):
-        self.status = MissionStatus.COMPLETED
-        self.touch()
+class StepTemplate(Document):
+    name: str
+    order: int = 0
+    mission_template: PydanticObjectId
 
-    def cancel(self):
-        self.status = MissionStatus.CANCELLED
-        self.touch()
+    start_time_offset: Optional[float] = None
+    end_time_offset: Optional[float] = None
+
+    step_type: StepType = StepType.CUSTOM
+    location: Optional[PydanticObjectId] = None 

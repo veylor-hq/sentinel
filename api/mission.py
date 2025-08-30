@@ -1,6 +1,6 @@
 from typing import Annotated, Optional
 from app.core.jwt import DecodedToken, FastJWT
-from models.models import Location, Step, User, Mission, MissionStatus
+from models.models import Location, MissionTemplate, Step, StepTemplate, User, Mission, MissionStatus
 from datetime import datetime
 from beanie import PydanticObjectId
 from fastapi import APIRouter, HTTPException, Query, Request
@@ -98,3 +98,64 @@ async def new_mission(request: Request, payload: CreateMissionSchema):
 
 
     return mission
+
+
+@mission_router.patch("/{mission_id}")
+async def change_mission_state(
+    mission_id: PydanticObjectId,
+    request: Request,
+    new_state: Annotated[MissionStatus, Query(alias="new_state")]
+):
+    token: DecodedToken = await FastJWT().decode(request.headers["Authorization"])
+    user = await User.get(token.id)
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+
+    mission = await Mission.get(mission_id)
+    if not mission:
+        raise HTTPException(404, "Mission not found")
+
+    if mission.operator != token.id:
+        raise HTTPException(403, "Forbidden")
+
+    mission.status = new_state
+    await mission.save()
+
+    return mission
+
+
+# make mission template from mission id, copy all steps into step templates
+@mission_router.post("/{mission_id}/template")
+async def create_mission_template(mission_id: PydanticObjectId, request: Request):
+    token: DecodedToken = await FastJWT().decode(request.headers["Authorization"])
+    user = await User.get(token.id)
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+
+    mission = await Mission.get(mission_id)
+    if not mission:
+        raise HTTPException(404, "Mission not found")
+
+    if mission.operator != token.id:
+        raise HTTPException(403, "Forbidden")
+
+    mission_template = await MissionTemplate(
+        name=mission.name,
+        tags=mission.tags
+    ).insert()
+
+    steps = await Step.find(Step.mission_id == mission.id).to_list()
+    step_templates = []
+    for step in steps:
+        step_template = await StepTemplate(
+            **step.model_dump(exclude={"id", "mission_id", "actual_start", "actual_end", "status"}),
+            mission_template=mission_template.id,
+            start_time_offset=step.planned_start.timestamp() - mission.start_time.timestamp() if step.planned_start and mission.start_time else None,
+            end_time_offset=step.planned_end.timestamp() - mission.start_time.timestamp() if step.planned_end and mission.start_time else None
+        ).insert()
+        step_templates.append(step_template)
+
+    return {
+        "mission_template": mission_template,
+        "step_templates": step_templates
+    }
