@@ -216,3 +216,32 @@ async def create_mission_from_template(
         ).insert()
 
     return mission
+
+
+@mission_router.get("/templates/")
+async def list_mission_templates(
+    include_steps: Annotated[Optional[bool], Query(alias="include_steps")] = False,
+    include_locations: Annotated[Optional[bool], Query(alias="include_locations")] = False
+):
+    templates = await MissionTemplate.find_all().to_list()
+    result = [] 
+    for template in templates:
+        template_data = {
+            "mission_template": template,
+            "step_templates": []
+        }
+        if include_steps:
+            step_templates = await StepTemplate.find(StepTemplate.mission_template == template.id).sort(StepTemplate.order).to_list()
+            if include_locations:
+                template_data["step_templates"] = [
+                    {
+                        "_id": str(step_template.id),
+                        **step_template.model_dump(exclude={"mission_template", "id"}),
+                        "location": await Location.get(step_template.location) if step_template.location else None,
+                    }
+                    for step_template in step_templates
+                ]
+            else:
+                template_data["step_templates"] = step_templates
+        result.append(template_data)
+    return result
