@@ -2,9 +2,9 @@ services:
   sentinel-app:
     # Build the image from the Dockerfile in the current directory
     build: .
-    # Map container port 8000 to host port 8000
+    # Map container port 8000 to host port 8001
     ports:
-      - "8000:8000"
+      - "8001:8000"
     # Pass environment variables from the .env file
     env_file:
       - .env
