@@ -1,46 +1,26 @@
-from app.core.jwt import FastJWT
+from h11 import Request
+from app.core.jwt import DecodedToken, FastJWT
 from models.models import User
 from app.core.password_utils import get_password_hash, verify_password
 from beanie import PydanticObjectId
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
+dashboard_router = APIRouter(prefix="/dashboard")
 
-class AuthSchema(BaseModel):
-    username: str
-    password: str
-
-class UserOut(BaseModel):
-    id: PydanticObjectId = Field(..., alias='id')
-    username: str
-
-    class Config:
-        json_encoders = {PydanticObjectId: str}
-
-auth_router = APIRouter(prefix="/auth")
-
-@auth_router.post("/signup", response_model=UserOut)
-async def signup_event(payload: AuthSchema) -> UserOut:
-    if await User.find_one({"username": payload.username}):
-        raise HTTPException(status_code=400, detail="Username already registered")
-    
-    user: User = User(
-        username=payload.username,
-        password=get_password_hash(payload.password),
-    )
-    user: User = await user.insert()
-    return UserOut(id=user.id, username=user.username)
+@dashboard_router.get("/")
+async def dashboard_event(request: Request):
+    token: DecodedToken = await FastJWT().decode(request.headers["Authorization"])
+    user = await User.get(token.id)
+    if not user:
+        print(token, user)
+        raise HTTPException(401, "Unauthorized")
 
 
-@auth_router.post("/signin")
-async def signin_event(payload: AuthSchema):
-    user = await User.find_one({"username": payload.username})
-    if not user or not verify_password(payload.password, user.password):
-        raise HTTPException(status_code=401, detail="Bad username or password")
-
-    jwt_token = await FastJWT().encode(optional_data={
-        "id": str(user.id),
-        "username": payload.username,
-    })
-
-    return {"token": jwt_token}
+    return {
+        "message": "Dashboard endpoint",
+        "user": {
+            "name": user.username,
+            "id": str(user.id)
+        }
+    }
