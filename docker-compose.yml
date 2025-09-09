@@ -1,0 +1,31 @@
+services:
+  sentinel-app:
+    # Build the image from the Dockerfile in the current directory
+    build: .
+    # Map container port 8000 to host port 8000
+    ports:
+      - "8000:8000"
+    # Pass environment variables from the .env file
+    env_file:
+      - .env
+    # Restart the container if it fails
+    restart: always
+    # Wait for the mongodb service to be healthy before starting this service
+    depends_on:
+      - mongodb
+
+  mongodb:
+    # Use the official MongoDB image from Docker Hub
+    image: mongo:latest
+    # Map container port 27017 to host port 27017
+    ports:
+      - "26017:27017"
+    # Set up a persistent volume for MongoDB data
+    volumes:
+      - mongo_data:/data/db
+    # Restart the container if it fails
+    restart: always
+
+# Define the named volume for persistent MongoDB data
+volumes:
+  mongo_data:
