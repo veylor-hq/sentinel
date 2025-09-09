@@ -22,7 +22,6 @@ async def seed():
         {
             "name": "Small Tesco [walk]"
         }
-        # {"name": "University Day Ops", "description": "Default daily university schedule template"},
     ]
     for m in default_missions:
         existing = await Mission.find_one(Mission.name == m["name"])

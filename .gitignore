@@ -234,3 +234,5 @@ councils.json
 .env.*
 
 .vscode
+
+personal_db.py

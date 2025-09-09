@@ -83,3 +83,46 @@ async def change_step_status(step_id: PydanticObjectId, status: StepStatus):
     step.status = status
     await step.save()
     return step
+
+
+@step_router.post("/proceed/{mission_id}")
+async def proceed_mission_step(mission_id: PydanticObjectId):
+    mission = await Mission.get(mission_id)
+    if not mission:
+        raise HTTPException(status_code=404, detail="Mission not found")
+    
+    if mission.status in [MissionStatus.COMPLETED, MissionStatus.CANCELLED]:
+        raise HTTPException(status_code=400, detail="Mission is not active")
+
+    if mission.status == MissionStatus.PLANNED:
+        mission.status = MissionStatus.ACTIVE
+        mission.start_time = datetime.utcnow()
+        await mission.save()
+
+    steps = await Step.find(Step.mission_id == mission.id).sort(Step.order).to_list()
+    if not steps:
+        raise HTTPException(status_code=400, detail="No steps in the mission")
+
+    active_step = next((s for s in steps if s.status == StepStatus.ACTIVE), None)
+    if active_step:
+        active_step.status = StepStatus.DONE
+        active_step.actual_end = datetime.utcnow()
+        await active_step.save()
+        next_step_index = steps.index(active_step) + 1
+    else:
+        next_step_index = 0
+
+    if next_step_index < len(steps):
+        next_step = steps[next_step_index]
+        next_step.status = StepStatus.ACTIVE
+        next_step.actual_start = datetime.utcnow()
+        await next_step.save()
+    else:
+        mission.status = MissionStatus.COMPLETED
+        mission.end_time = datetime.utcnow()
+        await mission.save()
+
+    return {
+        "mission": mission,
+        "active_step": next_step if next_step_index < len(steps) else None
+    }

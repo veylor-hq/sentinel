@@ -1,11 +1,11 @@
+import re
 from typing import Annotated, Optional
 from app.core.jwt import DecodedToken, FastJWT
-from models.models import Location, MissionTemplate, Step, StepTemplate, User, Mission, MissionStatus
-from datetime import datetime
+from models.models import Location, MissionTemplate, Step, StepStatus, StepTemplate, User, Mission, MissionStatus
+from datetime import datetime, timedelta
 from beanie import PydanticObjectId
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
-
 
 class CreateMissionSchema(BaseModel):
     name: str
@@ -30,6 +30,7 @@ async def get_missions(
     token: DecodedToken = await FastJWT().decode(request.headers["Authorization"])
     user = await User.get(token.id)
     if not user:
+        print(token, user)
         raise HTTPException(401, "Unauthorized")
 
     filters = [Mission.operator == token.id]
@@ -161,11 +162,12 @@ async def create_mission_template(mission_id: PydanticObjectId, request: Request
     }
 
 
-# template to mission
-import re
-
 @mission_router.post("/{mission_template_id}/from_template")
-async def create_mission_from_template(mission_template_id: PydanticObjectId, request: Request):
+async def create_mission_from_template(
+    mission_template_id: PydanticObjectId,
+    request: Request,
+    fast_start: Annotated[bool, Query(alias="fast_start")] = False
+):
     token: DecodedToken = await FastJWT().decode(request.headers["Authorization"])
     user = await User.get(token.id)
     if not user:
@@ -198,7 +200,9 @@ async def create_mission_from_template(mission_template_id: PydanticObjectId, re
     mission = await Mission(
         **mission_template.model_dump(exclude={"id", "name"}),
         name=mission_name,
-        operator=user.id
+        operator=user.id,
+        start_time=datetime.utcnow() if fast_start else None,
+        status=MissionStatus.ACTIVE if fast_start else MissionStatus.PLANNED
     ).insert()
 
     # Copy steps preserving order
@@ -206,7 +210,9 @@ async def create_mission_from_template(mission_template_id: PydanticObjectId, re
     for step_template in step_templates:
         await Step(
             **step_template.model_dump(exclude={"id", "mission_template"}),
-            mission_id=mission.id
+            mission_id=mission.id,
+            planned_start=mission.start_time + timedelta(seconds=step_template.start_time_offset) if mission.start_time and step_template.start_time_offset is not None else None,
+            status=StepStatus.ACTIVE if fast_start and step_template.order == 1 else StepStatus.PLANNED
         ).insert()
 
     return mission
