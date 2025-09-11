@@ -1,4 +1,9 @@
-# Sentinel Project
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/sentinel_banner.png">
+  <img alt="Sentinel logo" src=".github/sentinel_banner.png">
+</picture>
+
+# Sentinel
 
 **Sentinel** is a personal operations platform that applies military-style mission planning principles to daily life, helping users plan, execute, and review their activities with structure and adaptability.
 
