@@ -2,7 +2,7 @@ from app.core.jwt import FastJWT
 from models.models import User
 from app.core.password_utils import get_password_hash, verify_password
 from beanie import PydanticObjectId
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
 
@@ -44,3 +44,22 @@ async def signin_event(payload: AuthSchema):
     })
 
     return {"token": jwt_token}
+
+
+# TODO: hould this be a private router instead?
+@auth_router.get("/me", response_model=UserOut)
+async def me_event(request: Request) -> UserOut:
+    token: dict = await FastJWT().decode(request.headers["Authorization"])
+    user = await User.get(token.id)
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    return UserOut(id=user.id, username=user.username)
+
+
+@auth_router.get("/verify")
+async def verify_event(request: Request):
+    token: dict = await FastJWT().decode(request.headers["Authorization"])
+    user = await User.get(token.id)
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    return {"status": "valid"}
