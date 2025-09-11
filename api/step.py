@@ -41,12 +41,12 @@ async def create_step(request: Request, payload: CreateStepSchema):
     mission = await Mission.get(payload.mission_id)
     if not mission:
         raise HTTPException(status_code=400, detail="Mission does not exist")
-    
-    if mission.status in [MissionStatus.COMPLETED, MissionStatus.CANCELLED]:
-        raise HTTPException(status_code=400, detail="Mission is not active")
 
     if mission.operator != user.id:
         raise HTTPException(status_code=403, detail="Not authorized to create step for this mission")
+
+    if mission.status in [MissionStatus.COMPLETED, MissionStatus.CANCELLED]:
+        raise HTTPException(status_code=400, detail="Mission is not active")
 
     if payload.location:
         if not await Location.get(payload.location):
