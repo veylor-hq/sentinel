@@ -102,10 +102,10 @@ async def change_password_event(request: Request, body: ChangePasswordRequest):
     if not user:
         raise HTTPException(401, "Unauthorized")
     
-    if not verify_password(body.current_password, user.hashed_password):
+    if not verify_password(body.current_password, user.password):
         raise HTTPException(400, "Current password is incorrect")
     
-    user.hashed_password = get_password_hash(body.new_password)
+    user.password = get_password_hash(body.new_password)
     await user.save()
 
     await send_email(
