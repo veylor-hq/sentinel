@@ -11,7 +11,6 @@ from api.router import router as api_router
 from app.core.email import send_email
 from app.core.jwt import FastJWT
 from models.models import StepTemplate, User, Mission, Step, Location, Note, MissionTemplate
-from prometheus_fastapi_instrumentator import Instrumentator
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -46,10 +45,6 @@ def get_application():
 
 
 app = get_application()
-
-instrumentator = Instrumentator()
-
-instrumentator.instrument(app).expose(app)
 
 # health check
 @app.get("/health")
