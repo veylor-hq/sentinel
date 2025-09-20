@@ -88,3 +88,30 @@ async def resend_verification_event(request: Request):
     )
      
     return {"message": "Verification email sent"}
+
+
+# change password:
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(..., min_length=6)
+    new_password: str = Field(..., min_length=6)
+
+@profile_router.post("/change_password")
+async def change_password_event(request: Request, body: ChangePasswordRequest):
+    token: DecodedToken = await FastJWT().decode(request.headers["Authorization"])
+    user = await User.get(token.id)
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    
+    if not verify_password(body.current_password, user.hashed_password):
+        raise HTTPException(400, "Current password is incorrect")
+    
+    user.hashed_password = get_password_hash(body.new_password)
+    await user.save()
+
+    await send_email(
+        to=user.email,
+        subject="Password changed for Sentinel",
+        body="Your password has been changed successfully. If you did not perform this action, please contact support immediately.",
+    )
+    
+    return {"message": "Password changed successfully"}
