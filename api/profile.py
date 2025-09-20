@@ -5,7 +5,7 @@ from app.core.jwt import DecodedToken, FastJWT
 from models.models import Mission, Step, User
 from app.core.password_utils import get_password_hash, verify_password
 from beanie import PydanticObjectId
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from pydantic import BaseModel, Field
 
 
@@ -28,7 +28,7 @@ async def profile_event(request: Request):
     
 
 @profile_router.post("/set_email")
-async def set_email_event(request: Request, email: str):
+async def set_email_event(request: Request, email: str, background_tasks: BackgroundTasks):
     token: DecodedToken = await FastJWT().decode(request.headers["Authorization"])
     user = await User.get(token.id)
     if not user:
@@ -51,9 +51,9 @@ async def set_email_event(request: Request, email: str):
 
     verification_link = f"{config.API_BASE_URL}/verify?email={email}&token={token}"
 
-    await send_email(
+    background_tasks.add_task(send_email,
         to=email,
-        subject="Verify your email address for Sentinel",
+        subject="Verify your email address for Sentinel",       
         body="Please click the link below to verify your email address:\n\n{verification_link} \n\nIf you did not request this email, please ignore it.".format(verification_link=verification_link),
     )
      
@@ -61,7 +61,7 @@ async def set_email_event(request: Request, email: str):
 
 
 @profile_router.post("/resend_verification")
-async def resend_verification_event(request: Request): 
+async def resend_verification_event(request: Request, background_tasks: BackgroundTasks): 
     token: DecodedToken = await FastJWT().decode(request.headers["Authorization"])
     user = await User.get(token.id)
     if not user:
@@ -81,9 +81,9 @@ async def resend_verification_event(request: Request):
 
     verification_link = f"{config.API_BASE_URL}/verify?email={user.email}&token={token}"
 
-    await send_email(
+    background_tasks.add_task(send_email,
         to=user.email,
-        subject="Verify your email address for Sentinel",
+        subject="Verify your email address for Sentinel",       
         body="Please click the link below to verify your email address:\n\n{verification_link} \n\nIf you did not request this email, please ignore it.".format(verification_link=verification_link),
     )
      
@@ -96,22 +96,25 @@ class ChangePasswordRequest(BaseModel):
     new_password: str = Field(..., min_length=6)
 
 @profile_router.post("/change_password")
-async def change_password_event(request: Request, body: ChangePasswordRequest):
+async def change_password_event(request: Request, body: ChangePasswordRequest, background_tasks: BackgroundTasks):
     token: DecodedToken = await FastJWT().decode(request.headers["Authorization"])
     user = await User.get(token.id)
     if not user:
         raise HTTPException(401, "Unauthorized")
     
+    if body.current_password == body.new_password:
+        raise HTTPException(400, "New password must be different from current password")
+
     if not verify_password(body.current_password, user.password):
         raise HTTPException(400, "Current password is incorrect")
     
     user.password = get_password_hash(body.new_password)
     await user.save()
 
-    await send_email(
+    background_tasks.add_task(send_email,
         to=user.email,
         subject="Password changed for Sentinel",
         body="Your password has been changed successfully. If you did not perform this action, please contact support immediately.",
     )
-    
+
     return {"message": "Password changed successfully"}
