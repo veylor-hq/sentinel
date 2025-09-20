@@ -16,6 +16,14 @@ class Config(BaseSettings):
     JWT_SECRET_KEY: str
     PASSWORDS_SALT_SECRET_KEY: str
 
+    SMTP_HOST: Optional[str] = None
+    SMTP_PORT: Optional[int] = None
+    SMTP_USER: Optional[str] = None
+    SMTP_PASSWORD: Optional[str] = None
+    SMTP_SENDER: Optional[str] = None
+    START_TLS: bool = True
+    USE_TLS: bool = False
+
 
     # @field_validator("BACKEND_CORS_ORIGINS")
     # def assemble_cors_origins(cls, v: Union[str, List[str]]) -> Union[List[str], str]:

@@ -8,6 +8,7 @@ from api.mission import mission_router
 from api.location import location_router
 from api.step import step_router
 from api.dashboard import dashboard_router
+from api.profile import profile_router
 from app.core.jwt import FastJWT
 
 
@@ -21,6 +22,7 @@ private_router.include_router(mission_router, dependencies=[Depends(FastJWT().lo
 private_router.include_router(location_router, dependencies=[Depends(FastJWT().login_required)])
 private_router.include_router(step_router, dependencies=[Depends(FastJWT().login_required)])
 private_router.include_router(dashboard_router, dependencies=[Depends(FastJWT().login_required)])
+private_router.include_router(profile_router, dependencies=[Depends(FastJWT().login_required)])
 
 router.include_router(public_router)
 router.include_router(private_router)

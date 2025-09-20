@@ -9,6 +9,7 @@ class DecodedToken(BaseModel):
     expire: float
     id: PydanticObjectId
     username: str
+    email: str | None = None
 
 class FastJWT:
     def __init__(self):

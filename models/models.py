@@ -13,6 +13,8 @@ from pydantic import BaseModel, Field, validator
 class User(Document):
     username: str
     password: str
+    email: Optional[str] = None
+    email_verified: bool = False
 
 
 class MissionStatus(str, Enum):
