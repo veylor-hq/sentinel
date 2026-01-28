@@ -4,15 +4,11 @@
 </picture>
 
 # Sentinel
-
 **Sentinel** is a modular, HQ-centric operations platform designed to scale from personal daily life to high-stakes tactical coordination. It applies military-style Command & Control (C2) principles to manage intelligence, logistics, and situational awareness.
----
-
 ### The Vision: From Personal to Tactical
 Originally built as a personal operations tool, Sentinel v2 has evolved into a distributed HQ system. It treats every user as a "Node" and every task as a "Mission."
 
 Whether you are planning a University semester, tracking a Gym routine, or coordinating a Multi-device Field Operation, Sentinel provides the infrastructure to maintain the tactical advantage.
-
 
 ## Modular Architecture
 Sentinel is built on a Modular Core. You deploy the "HQ" and enable only the capabilities required for your current Theater of Operations, you're the one responsible for the security, privacy and success of your operations.
