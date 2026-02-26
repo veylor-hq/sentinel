@@ -1,6 +1,6 @@
-from typing import Annotated, Optional
+from typing import Annotated, Optional, Union
 from app.core.jwt import DecodedToken, FastJWT
-from models.models import GeoPoint, Location, LocationType
+from models.models import GeoJSONPoint, GeoJSONPolygon, Location, LocationType
 from datetime import datetime
 from beanie import PydanticObjectId
 from fastapi import APIRouter, HTTPException, Query, Request
@@ -10,7 +10,7 @@ from pydantic import BaseModel
 class CreateLocationSchema(BaseModel):
     name: str
     location_type: Optional[LocationType] = LocationType.GENERIC
-    coordinates: GeoPoint
+    geometry: Union[GeoJSONPoint, GeoJSONPolygon]
 
 location_router = APIRouter(prefix="/location")
 

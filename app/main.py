@@ -10,7 +10,8 @@ from app.core.config import config
 from api.router import router as api_router
 from app.core.email import send_email
 from app.core.jwt import FastJWT
-from models.models import StepTemplate, User, Mission, Step, Location, Note, MissionTemplate
+from models.models import StepTemplate, User, Mission, Step, Location, Note, MissionTemplate, RegionOfInterest, SITREP, Route, Asset, TelemetryState
+from models.poi import PointOfInterest
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -24,6 +25,12 @@ async def lifespan(app: FastAPI):
             Location,
             MissionTemplate,
             StepTemplate,
+            RegionOfInterest,
+            SITREP,
+            Route,
+            Asset,
+            TelemetryState,
+            PointOfInterest,
         ],
     )
 
