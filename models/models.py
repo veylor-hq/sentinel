@@ -8,7 +8,7 @@ from uuid import uuid4
 
 from pymongo import GEOSPHERE
 from beanie import Document, Indexed, Link, PydanticObjectId
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, model_validator
 
 
 class User(Document):
@@ -66,7 +66,8 @@ class GeoJSONLineString(BaseModel):
 class Location(Document):
     name: str
     location_type: LocationType = LocationType.GENERIC
-    geometry: Union[GeoJSONPoint, GeoJSONPolygon, GeoJSONLineString]
+    # Legacy DB rows may exist without geometry; geo queries skip them until repaired.
+    geometry: Optional[Union[GeoJSONPoint, GeoJSONPolygon, GeoJSONLineString]] = None
 
     class Settings:
         indexes = [
@@ -179,10 +180,68 @@ class Route(Document):
     name: str
 
 
+class AssetCategory(str, Enum):
+    PERSON = "person"
+    LOCATION = "location"
+    TRANSPORT = "transport"
+    ITEM = "item"
+    GEAR = "gear"
+
+
+class AssetLink(BaseModel):
+    """Cross-link between registry records (any category)."""
+
+    relation: str
+    target_id: PydanticObjectId
+    target_category: AssetCategory
+    label: Optional[str] = None
+
+
 class Asset(Document):
+    """
+    Unified operational registry: people, sites, transport, items, and gear.
+    Prefer `category`; legacy MongoDB docs may only have `asset_type` (excluded from API output).
+    """
+
     name: str
-    asset_type: str = "vehicle" # vehicle, person, equipment
+    category: AssetCategory = AssetCategory.TRANSPORT
     owner_id: PydanticObjectId
+    details: Dict[str, Any] = Field(default_factory=dict)
+    links: List[AssetLink] = Field(default_factory=list)
+    """Mission `Location` document (steps / geometry library) — optional."""
+    map_location_id: Optional[PydanticObjectId] = None
+    """Map marker (POI / mark on COP) — optional; preferred user-facing map link."""
+    poi_id: Optional[PydanticObjectId] = None
+    asset_type: Optional[str] = Field(default=None, exclude=True)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _category_from_legacy_asset_type(cls, data: Any):
+        if not isinstance(data, dict):
+            return data
+        cat = data.get("category")
+        if cat is None or cat == "":
+            legacy = data.get("asset_type")
+            if legacy is not None:
+                m = {"vehicle": "transport", "person": "person", "equipment": "item"}
+                data["category"] = m.get(str(legacy), "transport")
+        return data
+
+
+class MaintenanceSchedule(Document):
+    """
+    Service / inspection plan for a registry asset (not used for People).
+    """
+
+    owner_id: PydanticObjectId
+    asset_id: PydanticObjectId
+    title: str = "Maintenance"
+    notes: str = ""
+    next_due_at: datetime
+    recurrence_interval_days: Optional[int] = None
+    last_completed_at: Optional[datetime] = None
+    is_active: bool = True
+
 
 class TelemetryState(Document):
     asset_id: PydanticObjectId

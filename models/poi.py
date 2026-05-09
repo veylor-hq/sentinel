@@ -23,6 +23,10 @@ class PointOfInterest(Document):
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     tags: List[str] = Field(default_factory=list)
     mission_id: Optional[PydanticObjectId] = None
+    registry_asset_id: Optional[PydanticObjectId] = Field(
+        default=None,
+        description="Optional link back to Intelligence Registry row.",
+    )
     
     class Settings:
         name = "pois"

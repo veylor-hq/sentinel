@@ -25,6 +25,7 @@ from api.yjs import yjs_router
 from api.poi import poi_router
 from api.sitrep import sitrep_router
 from api.asset import asset_router
+from api.maintenance import maintenance_router
 
 public_router.include_router(auth_router)
 public_router.include_router(ingress_router)
@@ -39,6 +40,7 @@ private_router.include_router(aar_router, dependencies=[Depends(FastJWT().login_
 private_router.include_router(poi_router, dependencies=[Depends(FastJWT().login_required)])
 private_router.include_router(sitrep_router, dependencies=[Depends(FastJWT().login_required)])
 private_router.include_router(asset_router, dependencies=[Depends(FastJWT().login_required)])
+private_router.include_router(maintenance_router, dependencies=[Depends(FastJWT().login_required)])
 
 router.include_router(public_router)
 router.include_router(private_router)

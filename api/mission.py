@@ -283,7 +283,8 @@ async def get_mission_brief(mission_id: PydanticObjectId, request: Request):
         raise HTTPException(403, "Forbidden")
 
     steps = await Step.find(Step.mission_id == mission.id).sort(Step.order).to_list()
-    from models.models import Route, RegionOfInterest, Asset
+    from models.models import Route, RegionOfInterest, Asset, Note
+    notes = await Note.find(Note.mission_id == mission.id).to_list()
     routes = await Route.find(Route.mission_id == mission.id).to_list()
     rois = await RegionOfInterest.find(RegionOfInterest.mission_id == mission.id).to_list()
     assets = await Asset.find({"_id": {"$in": mission.attached_assets}}).to_list()
@@ -296,6 +297,7 @@ async def get_mission_brief(mission_id: PydanticObjectId, request: Request):
     return {
         "mission": mission,
         "steps": steps,
+        "notes": notes,
         "routes": routes,
         "rois": rois,
         "assets": assets,
